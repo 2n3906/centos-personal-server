@@ -1,0 +1,41 @@
+server {
+    # Ports to listen on
+    listen 80;
+    listen [::]:80;
+
+    # Server name to listen for
+    server_name SITE_NAME_HERE;
+
+    # Path to document root
+    root /sites/SITE_NAME_HERE/public;
+
+    # File to be used as index
+    index index.php index.html;
+
+    # Overrides logs defined in nginx.conf, allows per site logs.
+    access_log /var/log/nginx/SITE_NAME_HERE.access.log;
+    error_log /var/log/nginx/SITE_NAME_HERE.error.log;
+
+    # Default server block rules
+    include global/server/defaults.conf;
+
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+
+    location ~ \.php$ {
+        try_files $uri =404;
+        include global/fastcgi-params.conf;
+
+        fastcgi_pass unix:/var/run/php-fpm/php7.1-fpm.sock;
+    }
+}
+
+# Redirect www to non-www
+server {
+    listen 80;
+    listen [::]:80;
+    server_name www.SITE_NAME_HERE;
+
+    return 301 $scheme://SITE_NAME_HERE$request_uri;
+}

@@ -1,0 +1,4 @@
+# Install with:
+#   ansible-galaxy install -r requirements.yml
+
+- src: git+https://git.openstack.org/openstack/openstack-ansible-security

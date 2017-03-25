@@ -1,0 +1,94 @@
+---
+- name: Update all Yum packages before we start
+  yum: name=* state=latest update_cache=yes
+
+- name: Set timezone to {{ server_timezone }}
+  timezone:
+    name: "{{ server_timezone }}"
+    hwclock: UTC
+
+- name: Install packages we want
+  yum: name={{ item }} state=present
+  with_items:
+    - "@Development tools"
+    - nano
+    - mosh
+    - mailx # provides /bin/mail for openstack-ansible-security scripts
+    - yum-cron
+    - chrony # NTP client
+    - firewalld
+
+- name: Enable critical services
+  service: name={{ item }} state=started enabled=yes
+  with_items:
+    - chronyd
+    - firewalld
+
+- name: Make sure nginx group is configured
+  group:
+    name: "{{ nginx_group }}"
+    state: present
+
+- name: Put nginx user in nginx group
+  user:
+    name: "{{ nginx_user }}"
+    groups: "{{ nginx_group }}"
+    append: yes
+
+- name: Make sure we have a 'wheel' group
+  group:
+    name: wheel
+    state: present
+
+- name: Allow 'wheel' group to have passwordless sudo
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%wheel'
+    line: '%wheel ALL=(ALL) NOPASSWD: ALL'
+    validate: visudo -cf %s
+
+- name: Permanently enable SELinux, if not already
+  selinux:
+    policy: targeted
+    state: enforcing
+
+#- name: Add sudoers users to wheel group
+#  user:
+#    name: "{{ item }}"
+#    groups: wheel
+#    append: yes
+#  with_items: "{{ sudoers }}"
+
+# Override any weird changes caused by the openstack-ansible-security module
+- name: Configure chrony (NTP client) properly
+  template:
+    src: chrony.conf.j2
+    dest: /etc/chrony.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: yes
+
+# Could also conflict with openstack-ansible-security changes
+- name: Configure sshd
+  template:
+    src: sshd_config.j2
+    dest: /etc/ssh/sshd_config
+    owner: root
+    group: root
+    mode: '0600'
+    validate: /usr/sbin/sshd -t -f %s
+    backup: yes
+
+- name: Enable yum-cron
+  service: name=yum-cron state=started enabled=yes
+
+- name: Configure yum-cron to do automatic security updates
+  lineinfile: dest=/etc/yum/yum-cron.conf regexp={{ item.regexp }} line={{ item.line }} backup=yes
+  with_items:
+    - { regexp: '^update_cmd', line: 'update_cmd = security' }
+    - { regexp: '^update_messages', line: 'update_messages = yes' }
+    - { regexp: '^download_updates', line: 'download_updates = yes' }
+    - { regexp: '^apply_updates', line: 'apply_updates = yes' }
+  notify: restart yum-cron

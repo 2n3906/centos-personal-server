@@ -1,0 +1,15 @@
+; {{ ansible_managed }}
+; To make e-mail work nicely, please create the following DNS records.
+
+; SPF (https://en.wikipedia.org/wiki/Sender_Policy_Framework)
+{{ ansible_domain }}. IN TXT "v=spf1 ip4:{{ ansible_default_ipv4.address }} ip6:{{ ansible_default_ipv6.address }}/{{ ansible_default_ipv6.prefix }} -all"
+{{ ansible_nodename }}. IN TXT "v=spf1 ip4:{{ ansible_default_ipv4.address }} ip6:{{ ansible_default_ipv6.address }}/{{ ansible_default_ipv6.prefix }} -all"
+
+; DKIM (https://en.wikipedia.org/wiki/DomainKeys_Identified_Mail)
+default._domainkey.{{ ansible_domain }}. IN TXT "{{ dkim_key_parsed.stdout }}"
+
+; DMARC (https://en.wikipedia.org/wiki/DMARC)
+_dmarc.{{ ansible_domain }}. IN TXT "v=DMARC1; p=none"
+
+; CAA (https://sslmate.com/labs/caa/)
+{{ ansible_domain }}. IN CAA 0 issue "letsencrypt.org"

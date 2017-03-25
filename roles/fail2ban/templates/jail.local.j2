@@ -1,0 +1,17 @@
+# {{ ansible_managed }}
+
+[DEFAULT]
+# Ban hosts for one hour:
+bantime = 3600
+
+[sshd]
+enabled = true
+
+[sshd-ddos]
+enabled = true
+
+[nginx-http-auth]
+enabled = true
+
+[nginx-botsearch]
+enabled = true

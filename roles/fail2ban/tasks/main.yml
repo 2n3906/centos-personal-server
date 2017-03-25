@@ -1,0 +1,15 @@
+---
+# tasks file for fail2ban
+
+- name: Install fail2ban package
+  yum: name=fail2ban state=present
+
+- name: Configure fail2ban
+  template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    mode: '0644'
+    backup: yes
+
+- name: Enable fail2ban service
+  service: name=fail2ban state=started enabled=yes

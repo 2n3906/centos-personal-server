@@ -1,0 +1,59 @@
+---
+- name: Install Mosquitto
+  yum: name=mosquitto enablerepo=epel state=present
+
+- name: Configure Mosquitto
+  template: src=mosquitto.conf.j2 dest=/etc/mosquitto/mosquitto.conf backup=yes
+
+- name: Check if we've generated a Mosquitto password file already
+  stat: path=/etc/mosquitto/passwd
+  register: mosquittopw
+
+- name: Create Mosquitto password file (if needed)
+  file: path=/etc/mosquitto/passwd state=touch
+  when: mosquittopw.stat.exists == False
+
+- name: Check if username is set up in Mosquitto already
+  command: grep '^{{ mqtt_user }}:' /etc/mosquitto/passwd
+  register: username_present
+  changed_when: false
+  ignore_errors: true
+
+- name: Add our first username and password to Mosquitto
+  command: mosquitto_passwd -b /etc/mosquitto/passwd {{ mqtt_user }} {{ mqtt_passwd }}
+  when: username_present|failed
+
+- name: Create directory for persistence database
+  file:
+    path: /var/lib/mosquitto
+    state: directory
+    mode: 0755
+    owner: mosquitto
+    group: mosquitto
+
+- name: Update firewall to allow inbound secure-mqtt
+  firewalld: port=8883/tcp permanent=true state=enabled immediate=yes
+
+# Default service runs as unprivileged user.  Change that(!!) so
+# we can load certificates as root before we downgrade to u:mosquitto
+- name: Update mosquitto service file to start as root
+  lineinfile:
+    dest: /usr/lib/systemd/system/mosquitto.service
+    regexp: '^[# ]*User\s*='
+    line: '# User=mosquitto'
+    backup: yes
+
+- name: Enable Mosquitto
+  service: name=mosquitto state=started enabled=yes
+
+- name: Add OwnTracks repo
+  yum_repository:
+    name: owntracks
+    description: OwnTracks
+    baseurl: http://repo.owntracks.org/centos/
+    gpgkey: http://repo.owntracks.org/centos/RPM-GPG-KEY-owntracks
+    gpgcheck: yes
+
+# TODO: Fix ot-recorder packages
+#- name: Install OwnTracks ot-recorder
+#  yum: name=ot-recorder enablerepo=owntracks state=present

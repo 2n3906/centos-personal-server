@@ -1,0 +1,26 @@
+---
+# Server configuration
+
+server_timezone: America/New_York
+
+# Nginx configuration
+
+nginx_user: nginx
+nginx_group: www
+nginx_worker_connections: 2048
+nginx_worker_rlimit_nofile: 3072
+
+letsencrypt_email: user@example.org
+
+# MariaDB configuration
+
+mariadb_root_passwd: QcXnfUnF97MFYuBr
+
+# Postfix configuration
+
+root_email_alias: user@example.org
+
+# Mosquitto configuration
+
+mqtt_user: yQCnPY4M
+mqtt_passwd: A9CP9SbD

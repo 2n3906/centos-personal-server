@@ -1,0 +1,123 @@
+---
+- name: Check that postfix is installed
+  yum: name=postfix state=present
+
+- name: Enable postfix now and in the future
+  service: name=postfix state=started enabled=yes
+
+- name: Enable TLS for Postfix
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^smtp_tls_security_level', line: 'smtp_tls_security_level = may' }
+    - { regexp: '^smtpd_tls_security_level', line: 'smtpd_tls_security_level = may'}
+    - { regexp: '^smtpd_tls_cert_file', line: 'smtpd_tls_cert_file = /etc/letsencrypt/live/{{ ansible_nodename }}/fullchain.pem' }
+    - { regexp: '^smtpd_tls_key_file', line: 'smtpd_tls_key_file = /etc/letsencrypt/live/{{ ansible_nodename }}/privkey.pem' }
+    - { regexp: '^smtp_tls_loglevel', line: 'smtp_tls_loglevel = 1'}
+    - { regexp: '^smtpd_tls_loglevel', line: 'smtpd_tls_loglevel = 1'}
+    - { regexp: '^smtpd_tls_session_cache_database', line: 'smtpd_tls_session_cache_database = btree:${data_directory}/smtpd_scache'}
+    - { regexp: '^smtp_tls_session_cache_database', line: 'smtp_tls_session_cache_database = btree:${data_directory}/smtp_scache'}
+    - { regexp: '^smtpd_tls_auth_only', line: 'smtpd_tls_auth_only = yes'}
+    - { regexp: '^smtpd_tls_protocols', line: 'smtpd_tls_protocols = !SSLv2, !SSLv3'}
+    - { regexp: '^smtp_tls_ciphers', line: 'smtp_tls_ciphers = high'}
+    - { regexp: '^smtpd_tls_ciphers', line: 'smtpd_tls_ciphers = high'}
+  notify: reload postfix
+
+- name: Check that OpenDKIM is installed
+  yum: name=opendkim state=present
+
+# Configure opendkim.conf. Do we need to do something about the mail group?
+- name: Configure OpenDKIM
+  lineinfile:
+    dest: /etc/opendkim.conf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: "^AutoRestart[\t ]+", line: "AutoRestart\tyes" }
+    - { regexp: "^AutoRestartRate[\t ]+", line: "AutoRestartRate\t10/1h" }
+    - { regexp: "^LogWhy", line: "LogWhy\tyes" }
+    - { regexp: "^Syslog[\t ]+", line: "Syslog\tyes" }
+    - { regexp: "^SyslogSuccess", line: "SyslogSuccess\tyes" }
+    - { regexp: "^Mode", line: "Mode\tsv" } # sign and verify
+    - { regexp: "^Canonicalization", line: "Canonicalization\trelaxed/simple" }
+    - { regexp: "^[# ]*ExternalIgnoreList", line: "ExternalIgnoreList\trefile:/etc/opendkim/TrustedHosts" }
+    - { regexp: "^[# ]*InternalHosts", line: "InternalHosts\trefile:/etc/opendkim/TrustedHosts" }
+    - { regexp: "^[# ]*KeyTable", line: "KeyTable\trefile:/etc/opendkim/KeyTable" }
+    - { regexp: "^[# ]*SigningTable", line: "SigningTable\trefile:/etc/opendkim/SigningTable" }
+    - { regexp: "^[# ]*SignatureAlgorithm", line: "SignatureAlgorithm\trsa-sha256" }
+    - { regexp: "^[# ]*Socket", line: "Socket\tinet:8891@localhost" }
+
+# Create DKIM keys
+
+- name: Create DKIM key directory
+  file: path=/etc/opendkim/keys/{{ ansible_domain }} state=directory mode=0750
+
+- name: Create DKIM keys for our domain (if not already present)
+  command: opendkim-genkey -b 2048 -D /etc/opendkim/keys/{{ ansible_domain }} -d {{ ansible_domain }} -s default
+  args:
+    creates: /etc/opendkim/keys/{{ ansible_domain }}/default.txt
+
+- name: Fix DKIM key ownership
+  file:
+    path: /etc/opendkim/keys/{{ ansible_domain }}
+    owner: opendkim
+    group: opendkim
+    recurse: yes
+
+- name: Add private key to OpenDKIM KeyTable
+  lineinfile:
+    dest: /etc/opendkim/KeyTable
+    regexp: '^default._domainkey.{{ ansible_domain }}\s+'
+    line: "default._domainkey.{{ ansible_domain }} {{ ansible_domain }}:default:/etc/opendkim/keys/{{ ansible_domain }}/default.private"
+    backup: yes
+
+# Note: First line is needed for signing @domain.com, second line is for @hostname.domain.com
+- name: Add public key to OpenDKIM SigningTable
+  lineinfile:
+    dest: /etc/opendkim/SigningTable
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  with_items:
+    - { regexp: '^\*@{{ ansible_domain }}\s+', line: "*@{{ ansible_domain }} default._domainkey.{{ ansible_domain }}" }
+    - { regexp: '^\*@\*\.{{ ansible_domain }}\s+', line: "*@*.{{ ansible_domain }} default._domainkey.{{ ansible_domain }}" }
+
+- name: Add hosts to OpenDKIM TrustedHosts
+  lineinfile: dest=/etc/opendkim/TrustedHosts regexp={{ item.regexp }} line={{ item.line }}
+  with_items:
+    - { regexp: '^{{ ansible_domain }}', line: "{{ ansible_domain }}" }
+    - { regexp: '^{{ ansible_nodename }}', line: "{{ ansible_nodename }}" }
+
+- name: Enable opendkim now and in the future
+  service: name=opendkim state=started enabled=yes
+
+- name: Enable OpenDKIM for Postfix
+  lineinfile:
+    dest: /etc/postfix/main.cf
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - { regexp: '^milter_default_action', line: 'milter_default_action = accept' }
+    - { regexp: '^milter_protocol', line: 'milter_protocol = 2' }
+    - { regexp: '^smtpd_milters', line: 'smtpd_milters = inet:127.0.0.1:8891' }
+    - { regexp: '^non_smtpd_milters', line: 'non_smtpd_milters = $smtpd_milters' }
+  notify: reload postfix
+
+- name: Fetch and clean up value of DKIM public key
+  shell: cat /etc/opendkim/keys/{{ ansible_domain }}/default.txt | tr -d '\n' | egrep -o '\([^)]+\)' | sed 's/[\(\"]\s\+[\)\"]//g'
+  register: dkim_key_parsed
+  ignore_errors: true
+  changed_when: false
+
+- name: Leave behind a README for configuring SPF/DKIM/DMARC
+  template: src=README.dns-records.j2 dest=/root/README.dns-records backup=yes
+
+- name: Add alias for root mail delivery to remote inbox
+  lineinfile:
+    dest: /etc/aliases
+    regexp: '^[#\s]*root:'
+    line: "root: {{ root_email_alias }}"
+    backup: yes
+  notify: reload aliases

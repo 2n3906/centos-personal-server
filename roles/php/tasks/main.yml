@@ -1,0 +1,65 @@
+---
+- name: Install IUS Yum repos
+  yum:
+    name: "https://centos7.iuscommunity.org/ius-release.rpm"
+    state: present
+  when: ansible_os_family == 'RedHat'
+
+- name: Install packages we depend on
+  yum: name={{ item }} state=present
+  with_items:
+    - libyaml-devel # dependency for PHP YAML plugin
+    - libssh2       # dependency for PHP SSH plugin
+    - libssh2-devel # dependency for PHP SSH plugin
+
+- name: Install latest PHP 7.1 packages from IUS repo
+  yum: name={{ item }} enablerepo=ius state=present
+  with_items:
+    - php71u-devel
+    - php71u-fpm-nginx
+    - php71u-cli
+    - php71u-mysqlnd 
+    - php71u-xml
+    - php71u-gd
+    - php71u-mbstring
+    - php71u-pecl-apcu
+    - php71u-json
+
+# Ensure that Development Tools yum group is installed before using PECL!
+- name: Install PECL packages
+  pear: name={{ item }} state=present
+  with_items:
+    - pecl/yaml-2.0.0  # for Grav
+    - pecl/ssh2-1.0    # for Wordpress
+
+- name: Configure PHP-FPM user/group to match nginx
+  lineinfile: dest=/etc/php-fpm.d/www.conf regexp={{ item.regexp }} line={{ item.line }} state=present
+  with_items:
+    - { regexp: "^;*user", line: "user = {{ nginx_user }}" }
+    - { regexp: "^;*group", line: "group = {{ nginx_group }}" }
+    - { regexp: "^;*listen\\.owner", line: "listen.owner = {{ nginx_user }}" }
+    - { regexp: "^;*listen\\.group", line: "listen.group = {{ nginx_group }}" }
+
+- name: Tweak PHP options for security
+  ini_file: dest=/etc/php.ini section=PHP option={{ item.option }} value={{ item.value }} backup=yes
+  with_items:
+    - { option: 'post_max_size', value: '128M' }
+    - { option: 'upload_max_filesize', value: '128M' }
+    - { option: 'allow_url_fopen', value: 'Off' }
+    - { option: 'expose_php', value: 'Off' }
+
+- name: Enable PECL modules installed without packages
+  lineinfile: dest=/etc/php.ini regexp={{ item.regexp }} line={{ item.line }} state=present
+  with_items:
+    - { regexp: "^extension=yaml.so", line: "extension=yaml.so" }
+    - { regexp: "^extension=ssh2.so", line: "extension=ssh2.so" }
+
+- name: Configure php-fpm to listen to unix socket not port
+  lineinfile: 
+    dest: /etc/php-fpm.d/www.conf
+    regexp: "^listen.?=.+$"
+    line: "listen = /var/run/php-fpm/php7.1-fpm.sock"
+    state: present
+
+- name: Enable web server state
+  service: name=php-fpm state=started enabled=yes

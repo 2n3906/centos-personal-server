@@ -1,0 +1,14 @@
+---
+- name: Provision a brand-new CentOS 7 VPS
+  hosts: production
+  remote_user: root
+
+  roles:
+#    - openstack-ansible-security
+    - server
+    - php
+    - nginx
+    - mariadb
+    - postfix
+    - owntracks
+    - fail2ban
