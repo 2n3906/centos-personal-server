@@ -16,6 +16,7 @@
     - mailx # provides /bin/mail for openstack-ansible-security scripts
     - yum-cron
     - chrony # NTP client
+    - aide
     - firewalld
 
 - name: Enable critical services
@@ -92,3 +93,11 @@
     - { regexp: '^download_updates', line: 'download_updates = yes' }
     - { regexp: '^apply_updates', line: 'apply_updates = yes' }
   notify: restart yum-cron
+
+- name: Fix AIDE cron job
+  cron:
+    name: aide
+    cron_file: aide
+    user: root
+    special_time: daily
+    job: "/usr/sbin/aide --check | /usr/bin/mailx -s \"$HOSTNAME - Daily aide integrity check run\" root"
