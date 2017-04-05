@@ -21,6 +21,9 @@
 
 # But we do need to secure it.
 
+- name: Enable mariadb now and in the future
+  service: name=mariadb state=started enabled=yes
+
 - name: Update MariaDB root password for all root accounts
   mysql_user: name=root host_all=yes password={{ mariadb_root_passwd }}
 
@@ -35,6 +38,3 @@
 
 - name: Remove the MariaDB test database
   mysql_db: db=test state=absent
-
-- name: Enable mariadb now and in the future
-  service: name=mariadb state=started enabled=yes

@@ -12,7 +12,6 @@
   with_items:
     - "@Development tools"
     - nano
-    - mosh
     - mailx # provides /bin/mail for openstack-ansible-security scripts
     - yum-cron
     - chrony # NTP client
@@ -53,6 +52,9 @@
   selinux:
     policy: targeted
     state: enforcing
+  notify:
+    - restart server
+    - wait for server to restart
 
 #- name: Add sudoers users to wheel group
 #  user:
