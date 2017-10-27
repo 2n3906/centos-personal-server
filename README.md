@@ -6,7 +6,7 @@ reasonable personal server.  Attempts will be made to make it speedy, secure, fu
 ## Things we will be installing
 - Basic server security (SELinux, chronyd, yum-cron, and a locked-down sshd configuration)
 - [nginx](https://www.nginx.org/) stable (currently 1.10.x), plus some sweet config files and automatic certbot-based certificate renewal. Your first Let's Encrypt certificates will be created automatically if you haven't already done so.
-- MariaDB 10.1, automatically secured.
+- MariaDB 10.2, automatically secured.
 - PHP 7.1, secured and configured with php-fpm enabled.
 - Postfix, configured as a send-only mailer for your web server with TLS and SPF/DKIM/DMARC support enabled.
 - Fail2Ban, blocking suspicious SSH and HTTP visitors.

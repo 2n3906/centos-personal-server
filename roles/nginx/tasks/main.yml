@@ -19,7 +19,6 @@
     - /etc/nginx/conf.d/default.conf
     - /etc/nginx/conf.d/php-fpm.conf
     - /etc/nginx/default.d
-    - /etc/nginx/modules
     - /etc/nginx/fastcgi_params
     - /etc/nginx/koi-utf
     - /etc/nginx/koi-win
@@ -31,10 +30,14 @@
 - name: Create nginx.conf based on template
   template: src=nginx.conf.j2 dest=/etc/nginx/nginx.conf setype=httpd_config_t seuser=system_u serole=object_r
 
-- name: Copy the rest of our nginx config files
+- name: Copy global nginx config files
   copy: src={{ item }} dest=/etc/nginx setype=httpd_config_t seuser=system_u serole=object_r backup=yes
   with_items:
     - global
+
+- name: Copy sites-available, sites-enabled nginx config files
+  copy: src={{ item }} dest=/etc/nginx setype=httpd_config_t seuser=system_u serole=object_r force=no
+  with_items:
     - sites-available
     - sites-enabled
 

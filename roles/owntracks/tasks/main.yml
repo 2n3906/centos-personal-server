@@ -43,6 +43,9 @@
     line: '# User=mosquitto'
     backup: yes
 
+# TODO: touch /var/log/mosquitto.log and make it owned by mosquitto:mosquitto
+# possibly also fix the logrotate script for it
+
 - name: Enable Mosquitto
   service: name=mosquitto state=started enabled=yes
 

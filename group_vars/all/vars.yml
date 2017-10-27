@@ -10,17 +10,17 @@ nginx_group: www
 nginx_worker_connections: 2048
 nginx_worker_rlimit_nofile: 3072
 
-letsencrypt_email: user@example.org
+letsencrypt_email: "{{ vault_letsencrypt_email }}"
 
 # MariaDB configuration
 
-mariadb_root_passwd: QcXnfUnF97MFYuBr
+mariadb_root_passwd: "{{ vault_mariadb_root_passwd }}"
 
 # Postfix configuration
 
-root_email_alias: user@example.org
+root_email_alias: "{{ vault_root_email_alias }}"
 
 # Mosquitto configuration
 
-mqtt_user: yQCnPY4M
-mqtt_passwd: A9CP9SbD
+mqtt_user: "{{ vault_mqtt_user }}"
+mqtt_passwd: "{{ vault_mqtt_passwd }}"
