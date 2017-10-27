@@ -13,27 +13,19 @@
 - name: Install certbot
   yum: name=certbot state=present
 
-- name: Delete old system-provided nginx config files we don't want
-  file: name={{ item }} state=absent
-  with_items:
-    - /etc/nginx/conf.d/default.conf
-    - /etc/nginx/conf.d/php-fpm.conf
-    - /etc/nginx/default.d
-    - /etc/nginx/fastcgi_params
-    - /etc/nginx/koi-utf
-    - /etc/nginx/koi-win
-    - /etc/nginx/mime.types
-    - /etc/nginx/scgi_params
-    - /etc/nginx/uwsgi_params
-    - /etc/nginx/win-utf
-
 - name: Create nginx.conf based on template
   template: src=nginx.conf.j2 dest=/etc/nginx/nginx.conf setype=httpd_config_t seuser=system_u serole=object_r
 
 - name: Copy global nginx config files
   copy: src={{ item }} dest=/etc/nginx setype=httpd_config_t seuser=system_u serole=object_r backup=yes
   with_items:
+    - conf.d
+    - default.d
+    - fastcgi_params
     - global
+    - mime.types
+    - scgi_params
+    - uwsgi_params
 
 - name: Copy sites-available, sites-enabled nginx config files
   copy: src={{ item }} dest=/etc/nginx setype=httpd_config_t seuser=system_u serole=object_r force=no
