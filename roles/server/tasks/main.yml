@@ -17,6 +17,7 @@
     - chrony # NTP client
     - aide
     - firewalld
+    - MySQL-python
 
 - name: Enable critical services
   service: name={{ item }} state=started enabled=yes
