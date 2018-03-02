@@ -12,25 +12,25 @@
     - libssh2       # dependency for PHP SSH plugin
     - libssh2-devel # dependency for PHP SSH plugin
 
-- name: Install latest PHP 7.1 packages from IUS repo
+- name: Install latest PHP 7.2 packages from IUS repo
   yum: name={{ item }} enablerepo=ius state=present
   with_items:
-    - php71u-devel
-    - php71u-fpm-nginx
-    - php71u-cli
-    - php71u-mysqlnd 
-    - php71u-xml
-    - php71u-gd
-    - php71u-mbstring
-    - php71u-pecl-apcu
-    - php71u-json
+    - php72u-devel
+    - php72u-fpm-nginx
+    - php72u-cli
+    - php72u-mysqlnd
+    - php72u-xml
+    - php72u-gd
+    - php72u-mbstring
+    - php72u-pecl-apcu
+    - php72u-json
 
 # Ensure that Development Tools yum group is installed before using PECL!
 - name: Install PECL packages
   pear: name={{ item }} state=present
   with_items:
-    - pecl/yaml-2.0.0  # for Grav
-    - pecl/ssh2-1.0    # for Wordpress
+    - pecl/yaml-2.0.2  # for Grav
+    - pecl/ssh2-1.1.2  # for Wordpress
 
 - name: Configure PHP-FPM user/group to match nginx
   lineinfile: dest=/etc/php-fpm.d/www.conf regexp={{ item.regexp }} line={{ item.line }} state=present
