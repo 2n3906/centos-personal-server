@@ -1,14 +1,15 @@
 ---
 - name: Provision a brand-new CentOS 7 VPS
   hosts: production
-  remote_user: root
+  remote_user: johnston
+  become: yes
 
   roles:
 #    - openstack-ansible-security
-    - server
-    - php
-    - nginx
+#    - server
+#    - php
+#    - nginx
     - mariadb
-    - postfix
-    - owntracks
-    - fail2ban
+#    - postfix
+#    - owntracks
+#    - fail2ban
