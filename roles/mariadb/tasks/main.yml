@@ -38,3 +38,8 @@
 
 - name: Remove the MariaDB test database
   mysql_db: db=test state=absent
+
+- name: Tune MariaDB
+  ini_file: dest=/etc/my.cnf.d/server.cnf section=mysqld option={{ item.option }} value={{ item.value }} backup=yes
+  with_items:
+    - { option: 'max_allowed_packet', value: '128M' }

@@ -80,6 +80,9 @@
     - { target: '/sites/([^/]*)?/public(/.*)?', setype: 'httpd_sys_content_t' }  # docroot
     - { target: '/sites/([^/]*)?/cache(/.*)?', setype: 'httpd_cache_t' } # cache
     - { target: '/sites/([^/]*)?/public(/.*)?/wp-content/uploads(/.*)?', setype: 'httpd_sys_rw_content_t' } # wordpress read/write
+    - { target: '/sites/([^/]*)?/public(/.*)?/wp-content/backups(/.*)?', setype: 'httpd_sys_rw_content_t' } # wordpress updraft plus backups
+    - { target: '/sites/([^/]*)?/public/tmp(/.*)?', setype: 'httpd_sys_rw_content_t' } # matomo
+    - { target: '/etc/(letsencrypt|certbot)/(live|archive)(/.*)?', setype: 'cert_t' } # letsencrypt (not sure if needed)
 
 - name: Enable nginx now and in the future
   service: name=nginx state=started enabled=yes
